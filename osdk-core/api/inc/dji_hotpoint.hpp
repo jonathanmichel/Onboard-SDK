@@ -201,6 +201,7 @@ public:
    *  @param timer timeout to wait for ACK
    */
   ACK::ErrorCode updateRadius(float32_t meter, int timer);
+  void updateRadiusWithoutAck(float32_t meter);
   /*! @brief
    *
    *  reset yaw of hotpoint mission

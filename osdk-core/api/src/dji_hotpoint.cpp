@@ -245,9 +245,9 @@ HotpointMission::updateYawRate(HotpointMission::YawRate& Data, int timeout)
   hotPointData.yawRate   = Data.yawRate;
   hotPointData.clockwise = Data.clockwise ? 1 : 0;
 
-  vehicle->protocolLayer->send(
-    2, vehicle->getEncryption(), OpenProtocolCMD::CMDSet::Mission::hotpointYawRate, &Data,
-    sizeof(Data), 500, 2, false, 2);
+  vehicle->protocolLayer->send( 2, vehicle->getEncryption(),
+          OpenProtocolCMD::CMDSet::Mission::hotpointYawRate, &Data,
+          sizeof(Data), 500, 2, false, 2);
 
   ack = *((ACK::ErrorCode*)vehicle->waitForACK(
     OpenProtocolCMD::CMDSet::Mission::hotpointYawRate, timeout));
@@ -261,6 +261,7 @@ HotpointMission::updateYawRate(float32_t yawRate, bool isClockwise,
 {
   YawRate p;
   p.yawRate   = yawRate;
+
   p.clockwise = isClockwise ? 1 : 0;
   updateYawRate(p, callback, userData);
 }
@@ -299,6 +300,14 @@ HotpointMission::updateRadius(float32_t meter, int timeout)
     OpenProtocolCMD::CMDSet::Mission::hotpointRadius, timeout));
 
   return ack;
+}
+
+void
+HotpointMission::updateRadiusWithoutAck(float32_t meter)
+{
+    vehicle->protocolLayer->send(0, vehicle->getEncryption(),
+                                 OpenProtocolCMD::CMDSet::Mission::hotpointRadius,
+                                 &meter, sizeof(meter), 500, 2, false, 2);
 }
 
 void
