@@ -173,6 +173,7 @@ public:
    *  @param timer timeout to wait for ACK
    */
   ACK::ErrorCode updateYawRate(YawRate& Data, int timer);
+  void updateYawRateWithoutAck(float32_t rate);
   /*! @brief
    *
    *  update yaw rate and orientation of hotpoint mission

@@ -26,6 +26,8 @@
  *
  */
 
+#include <dji_hotpoint.hpp>
+
 #include "dji_hotpoint.hpp"
 #include "dji_mission_manager.hpp"
 #include "dji_vehicle.hpp"
@@ -261,9 +263,14 @@ HotpointMission::updateYawRate(float32_t yawRate, bool isClockwise,
 {
   YawRate p;
   p.yawRate   = yawRate;
-
   p.clockwise = isClockwise ? 1 : 0;
   updateYawRate(p, callback, userData);
+}
+
+void HotpointMission::updateYawRateWithoutAck(float32_t rate) {
+  vehicle->protocolLayer->send(0, vehicle->getEncryption(),
+                               OpenProtocolCMD::CMDSet::Mission::hotpointYawRate,
+                               &rate, sizeof(rate), 500, 2, false, 2);
 }
 
 void
