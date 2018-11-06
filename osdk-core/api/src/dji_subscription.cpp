@@ -227,7 +227,7 @@ DataSubscription::verifyCallback(Vehicle*      vehiclePtr,
 
   if (!ACK::getError(ackErrorCode))
   {
-    DSTATUS("Verify subscription successful.");
+    //DSTATUS("Verify subscription successful.");
 //    subscribPtr->verifySuccessful = true;
   }
   else
@@ -251,7 +251,7 @@ DataSubscription::verify(int timeout)
 
   if (!ACK::getError(ack))
   {
-    DSTATUS("Verify subscription successful.");
+    //DSTATUS("Verify subscription successful.");
 //    verifySuccessful = true;
   }
   else
@@ -312,11 +312,11 @@ DataSubscription::addPackageCallback(Vehicle*      vehiclePtr,
   ackErrorCode.info = rcvContainer.recvInfo;
   ackErrorCode.data = rcvContainer.recvData.subscribeACK;
 
-  DSTATUS("Start package %d result: %d.", packageHandle->getInfo().packageID,
-          ackErrorCode.data);
-  DSTATUS("Package %d info: freq=%d, nTopics=%d.",
-          packageHandle->getInfo().packageID, packageHandle->getInfo().freq,
-          packageHandle->getInfo().numberOfTopics);
+  //DSTATUS("Start package %d result: %d.", packageHandle->getInfo().packageID,
+  //        ackErrorCode.data);
+  //DSTATUS("Package %d info: freq=%d, nTopics=%d.",
+  //        packageHandle->getInfo().packageID, packageHandle->getInfo().freq,
+  //        packageHandle->getInfo().numberOfTopics);
   if (!ACK::getError(ackErrorCode))
   {
     packageHandle->packageAddSuccessHandler();
@@ -375,12 +375,12 @@ DataSubscription::startPackage(int packageID, int timeout)
   ack = *((ACK::ErrorCode*)getVehicle()->waitForACK(
     OpenProtocolCMD::CMDSet::Subscribe::addPackage, timeout));
 
-  DSTATUS("Start package %d result: %d.",
-          package[packageID].getInfo().packageID, ack.data);
-  DSTATUS("Package %d info: freq=%d, nTopics=%d.",
-          package[packageID].getInfo().packageID,
-          package[packageID].getInfo().freq,
-          package[packageID].getInfo().numberOfTopics);
+  //DSTATUS("Start package %d result: %d.",
+  //        package[packageID].getInfo().packageID, ack.data);
+  //DSTATUS("Package %d info: freq=%d, nTopics=%d.",
+  //        package[packageID].getInfo().packageID,
+  //        package[packageID].getInfo().freq,
+  //        package[packageID].getInfo().numberOfTopics);
 
   if (!ACK::getError(ack))
   {
@@ -473,7 +473,7 @@ DataSubscription::removePackageCallback(Vehicle*      vehiclePtr,
 
   if (!ACK::getError(ackErrorCode))
   {
-    DSTATUS("Remove package %d successful.", packageID);
+    //DSTATUS("Remove package %d successful.", packageID);
     packageHandle->packageRemoveSuccessHandler();
     if(packageHandle->hasLeftOverData())
     {
@@ -514,7 +514,7 @@ DataSubscription::removePackage(int packageID, int timeout)
 
   if (!ACK::getError(ack))
   {
-    DSTATUS("Remove package %d successful.", packageID);
+    //DSTATUS("Remove package %d successful.", packageID);
     package[packageID].packageRemoveSuccessHandler();
     if(package[packageID].hasLeftOverData())
     {
