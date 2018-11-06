@@ -29,6 +29,7 @@
 
 #include "dji_log.hpp"
 #include "dji_memory_default.hpp"
+#include "../../../../NivitecPi/util/timer.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -63,8 +64,11 @@ Log::title(int level, const char* prefix, const char* func, int line)
 {
   if (level)
   {
-    const char str[] = "\n%s/%d @ %s, L%d: ";
-    print(str, prefix, level, func, line);
+    const char str[] = "\n%s %s/%d @ %s, L%d: ";
+    // todo replace that shit !!!
+    char timestamp[17];
+    getTimestamp(timestamp);
+    print(str, timestamp, prefix, level, func, line);
     return *this;
   }
   else
