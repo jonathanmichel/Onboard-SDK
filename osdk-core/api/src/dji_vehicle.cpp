@@ -220,7 +220,7 @@ Vehicle::functionalSetUp()
   }
 
 
-    if (!initMissionManager())
+  if (!initMissionManager())
   {
     DERROR("Failed to initialize Mission Manager!\n");
     return 1;

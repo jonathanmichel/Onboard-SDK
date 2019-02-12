@@ -160,12 +160,16 @@ public:
   int wayptCounter;
   int hotptCounter;
 
+  // Custom functions Nivitec, reset waypoints/hotpoint missions
+  void resetWaypt();
+  void resetHotpt();
+
 private:
   //! @note no dynamic container, so fix the size of the mission container
   static const int MAX_MISSION_SIZE = 5;
 
-  WaypointMission* wpMissionArray[MAX_MISSION_SIZE];
   HotpointMission* hpMissionArray[MAX_MISSION_SIZE];
+  WaypointMission* wpMissionArray[MAX_MISSION_SIZE];
 };
 
 } // OSDK
