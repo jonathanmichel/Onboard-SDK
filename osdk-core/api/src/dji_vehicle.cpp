@@ -58,6 +58,10 @@ Vehicle::Vehicle(const char* device,
   , advancedSensingEnabled(enableAdvancedSensing)
   , USBReadThread(NULL)
   , USBThreadReady(false)
+  , payloadDevice(NULL)
+  , cameraManager(NULL)
+  , flightController(NULL)
+  , psdkManager(NULL)
 {
   if (!device)
   {
@@ -87,6 +91,10 @@ Vehicle::Vehicle(bool threadSupport)
   , virtualRC(NULL)
   , UARTSerialReadThread(NULL)
   , callbackThread(NULL)
+  , payloadDevice(NULL)
+  , cameraManager(NULL)
+  , flightController(NULL)
+  , psdkManager(NULL)
 {
   this->threadSupported = threadSupport;
   callbackId            = 0;
@@ -135,6 +143,16 @@ Vehicle::mandatorySetUp()
   }
 }
 
+bool
+Vehicle::GimbalSetUp()
+{
+  if (this->gimbal == 0)
+  {
+    initGimbal();
+  }
+  return ((this->gimbal == 0) ? false : true);
+}
+
 int
 Vehicle::functionalSetUp()
 {
@@ -174,7 +192,8 @@ Vehicle::functionalSetUp()
   }
 
   /*
-   * @note Initialize Movement Control
+   * @note Initialize Movement Control,
+   * @note it will be replaced by FlightActions and FlightController in the future.
    */
   if (!initControl())
   {
@@ -219,6 +238,20 @@ Vehicle::functionalSetUp()
     DERROR("Failed to initialize Mobile Device!\n");
   }
 
+  if (!initPayloadDevice())
+  {
+    DERROR("Failed to initialize Payload Device!\n");
+  }
+
+  if (!initCameraManager())
+  {
+    DERROR("Failed to initialize PayloadManager!\n");
+  }
+
+  if (!initPSDKManager())
+  {
+    DERROR("Failed to initialize PSDKManager!\n");
+  }
 
   if (!initMissionManager())
   {
@@ -235,6 +268,12 @@ Vehicle::functionalSetUp()
   if (!initVirtualRC())
   {
     DERROR("Failed to initiaze VirtualRC!\n");
+    return 1;
+  }
+
+  if(!initFlightController())
+  {
+    DERROR("Failed to initialize FlightController!\n");
     return 1;
   }
 
@@ -296,8 +335,8 @@ Vehicle::initCMD_SetSupportMatrix()
 void
 Vehicle::callbackPoll()
 {
-  VehicleCallBackHandler cbVal;
-  RecvContainer          recvCont;
+  VehicleCallBackHandler cbVal = {};
+  RecvContainer          recvCont = {};
   //! If Head = Tail, there is no data in the buffer, do not call cbPop.
   protocolLayer->getThreadHandle()->lockNonBlockCBAck();
   if (this->circularBuffer->head != this->circularBuffer->tail)
@@ -373,6 +412,18 @@ Vehicle::~Vehicle()
     delete this->mobileDevice;
   }
 
+  if (this->payloadDevice)
+  {
+    delete this->payloadDevice;
+  }
+  if (this->cameraManager)
+  {
+    delete this->cameraManager;
+  }
+  if (this->psdkManager)
+  {
+    delete this->psdkManager;
+  }
   if (this->broadcast)
   {
     delete this->broadcast;
@@ -401,6 +452,10 @@ Vehicle::~Vehicle()
   {
     delete this->platformManager;
   }
+  if(this->flightController)
+  {
+    delete this->flightController;
+  }
 
   this->USBThreadReady = false;
 }
@@ -410,6 +465,7 @@ Vehicle::initOpenProtocol()
 {
   //Initialize platform manager before passing pointer to OpenProtocol constructor
   this->platformManager = new PlatformManager();
+
 
   this->protocolLayer = new (std::nothrow)
     OpenProtocol(this->platformManager, this->device, this->baudRate);
@@ -838,7 +894,8 @@ Vehicle::initGimbal()
   ACK::ErrorCode ack;
 
   // Gimbal information via subscription
-  Telemetry::TypeMap<Telemetry::TOPIC_GIMBAL_STATUS>::type subscriptionGimbal;
+  Telemetry::TypeMap<Telemetry::TOPIC_GIMBAL_STATUS>::type
+    subscriptionGimbal = {};
 
   if (isLegacyM600())
   {
@@ -913,6 +970,23 @@ Vehicle::initGimbal()
     DSTATUS("Gimbal not mounted!\n");
   }
 
+  return true;
+}
+
+bool
+Vehicle::initFlightController()
+{
+  if(this->flightController)
+  {
+    DDEBUG("flightController already initalized!");
+    return true;
+  }
+  this->flightController = new (std::nothrow) FlightController(this);
+  if (this->flightController == 0)
+  {
+    DERROR("Failed to allocate memory for flightController!\n");
+    return false;
+  }
   return true;
 }
 
@@ -999,7 +1073,54 @@ Vehicle::initMobileDevice()
 
     return true;
 }
+bool Vehicle::initPayloadDevice()
+{
+  if(this->payloadDevice)
+  {
+    DDEBUG("Payload Device already initalized!");
+    return true;
+  }
+  this->payloadDevice = new (std::nothrow) PayloadDevice(this);
+  if (this->payloadDevice == 0)
+  {
+    DERROR("Failed to allocate memory for payload Device!\n");
+    return false;
+  }
+  return true;
 
+}
+
+bool Vehicle::initCameraManager()
+{
+  if(this->cameraManager)
+  {
+    DDEBUG("cameraManager already initalized!");
+    return true;
+  }
+  this->cameraManager = new (std::nothrow) CameraManager(this);
+  if (this->cameraManager == 0)
+  {
+    DERROR("Failed to allocate memory for pm!\n");
+    return false;
+  }
+  return true;
+}
+
+bool Vehicle::initPSDKManager()
+{
+  if(this->psdkManager)
+  {
+    DDEBUG("psdkManager already initalized!");
+    return true;
+  }
+  this->psdkManager = new (std::nothrow) PSDKManager(this);
+  if (this->psdkManager == 0)
+  {
+    DERROR("Failed to allocate memory for pm!\n");
+    return false;
+  }
+  return true;
+}
 
 bool
 Vehicle::initMissionManager()
@@ -1153,7 +1274,7 @@ Vehicle::processReceivedData(RecvContainer* receivedFrame)
   }
   else
   {
-    DDEBUG("Dispatcher identified as push data\n");
+    //DDEBUG("Dispatcher identified as push data\n");
     PushDataHandler(static_cast<void*>(receivedFrame));
   }
 }
@@ -1289,6 +1410,7 @@ Vehicle::activate(ActivateData* data, int timeout)
   {
     DSTATUS("Activation successful\n");
     protocolLayer->setKey(accountData.encKey);
+    setActivationStatus(true);
 
     if(!this->gimbal)
     {
@@ -1410,7 +1532,7 @@ Vehicle::getDroneVersion(int timeout)
 
     strncpy(droneVersionACK.data.version_name, this->versionData.version_name,
             sizeof(this->versionData.version_name));
-    droneVersionACK.data.version_name[sizeof(this->versionData.version_name)] =
+    droneVersionACK.data.version_name[sizeof(this->versionData.version_name) - 1] =
       '\0';
 
     strncpy(droneVersionACK.data.hwVersion, this->versionData.hwVersion,
@@ -1464,12 +1586,14 @@ Vehicle::activateCallback(Vehicle* vehiclePtr, RecvContainer recvFrame,
   else
   {
     DERROR("ACK is exception, sequence %d\n", recvFrame.recvInfo.seqNumber);
+    return;
   }
 
   if (ack_data == OpenProtocolCMD::ErrorCode::ActivationACK::SUCCESS &&
       vehiclePtr->accountData.encKey)
   {
     vehiclePtr->protocolLayer->setKey(vehiclePtr->accountData.encKey);
+    vehiclePtr->setActivationStatus(true);
   }
 }
 
@@ -1567,10 +1691,8 @@ Vehicle::ACKHandler(void* eventData)
     DERROR("Invalid ACK event data received!\n");
     return;
   }
-
   RecvContainer* ackData = (RecvContainer*)eventData;
   const uint8_t cmd[] = { ackData->recvInfo.cmd_set, ackData->recvInfo.cmd_id };
-
   if (ackData->recvInfo.cmd_set == OpenProtocolCMD::CMDSet::mission)
   {
     if (memcmp(cmd, OpenProtocolCMD::CMDSet::Mission::waypointAddPoint,
@@ -1640,8 +1762,26 @@ Vehicle::ACKHandler(void* eventData)
   }
   else if (ackData->recvInfo.cmd_set == OpenProtocolCMD::CMDSet::control)
   {
-    ackErrorCode.info = ackData->recvInfo;
-    ackErrorCode.data = ackData->recvData.commandACK;
+    if (memcmp(cmd, OpenProtocolCMD::CMDSet::Control::extendedFunction,
+                    sizeof(cmd)) == 0) {
+      extendedFunctionRspAck.info = ackData->recvInfo;
+      extendedFunctionRspAck.info.buf = ackData->recvData.raw_ack_array;
+      extendedFunctionRspAck.updated = true;
+    }
+    else if(memcmp(cmd, OpenProtocolCMD::CMDSet::Control::parameterRead, sizeof(cmd))==0 ||
+       memcmp(cmd, OpenProtocolCMD::CMDSet::Control::parameterWrite, sizeof(cmd))==0)
+    {
+      paramAck.info            = ackData->recvInfo;
+      paramAck.data.retCode    = ackData->recvData.paramAckData.retCode;
+      paramAck.data.hashValue  = ackData->recvData.paramAckData.hashValue;
+      memcpy(paramAck.data.paramValue, ackData->recvData.paramAckData.paramValue, MAX_PARAMETER_VALUE_LENGTH);
+      paramAck.updated         = true;
+    }
+    else
+    {
+      ackErrorCode.info = ackData->recvInfo;
+      ackErrorCode.data = ackData->recvData.commandACK;
+    }
   }
   else if (memcmp(cmd, OpenProtocolCMD::CMDSet::MFIO::init, sizeof(cmd)) == 0)
   {
@@ -1653,6 +1793,12 @@ Vehicle::ACKHandler(void* eventData)
     mfioGetACK.ack.info = ackData->recvInfo;
     mfioGetACK.ack.data = ackData->recvData.mfioGetACK.result;
     mfioGetACK.value    = ackData->recvData.mfioGetACK.value;
+  }
+  else if (memcmp(cmd, OpenProtocolCMD::CMDSet::Intelligent::setAvoidObstacle, sizeof(cmd)) == 0)
+  {
+    /*! data mean's the setting's data ref in AvoidObstacleData struct*/
+    ackErrorCode.info = ackData->recvInfo;
+    ackErrorCode.data = ackData->recvData.commandACK;
   }
   else
   {
@@ -1807,6 +1953,71 @@ Vehicle::PushDataHandler(void* eventData)
     }
 
   }
+  else if (memcmp(cmd, OpenProtocolCMD::CMDSet::Broadcast::psdkWidgetValue,
+                  sizeof(cmd)) == 0)
+  {
+    /*! @TODO The decoding of psdk widget values supports only one psdk device.
+     * So don't initialize two psdk device in the same time */
+    if (psdkManager) {
+      for(int i = 0; i < PAYLOAD_INDEX_CNT; i++)
+      {
+        VehicleCallBackHandler
+            *handler =
+          psdkManager->getSubscribeWidgetValuesHandler((PayloadIndexType) i);
+        if (handler && handler->callback) {
+          if (threadSupported) {
+            DDEBUG("Received value data from payload widget\n");
+            protocolLayer->getThreadHandle()->lockNonBlockCBAck();
+            this->circularBuffer->cbPush(this->circularBuffer,
+                                         *handler, *pushDataEntry);
+            protocolLayer->getThreadHandle()->freeNonBlockCBAck();
+          } else {
+            handler->callback(this, *(pushDataEntry),
+                              handler->userData);
+          }
+        }
+      }
+    }
+  }
+  else if (memcmp(cmd, OpenProtocolCMD::CMDSet::Broadcast::fromPayload,
+                  sizeof(cmd)) == 0)
+  {
+    if (payloadDevice) {
+      if (payloadDevice->fromPSDKHandler.callback) {
+        if (threadSupported) {
+          DDEBUG("Received data from payload\n");
+          protocolLayer->getThreadHandle()->lockNonBlockCBAck();
+          this->circularBuffer->cbPush(this->circularBuffer, payloadDevice->fromPSDKHandler,
+                                       *pushDataEntry);
+          protocolLayer->getThreadHandle()->freeNonBlockCBAck();
+        } else {
+          payloadDevice->fromPSDKHandler.callback(this, *(pushDataEntry), payloadDevice->fromPSDKHandler.userData);
+        }
+      }
+    }
+    /*! @TODO The decoding of psdk commonication data supports only one psdk device.
+     * So don't initialize two psdk device in the same time */
+    if (psdkManager) {
+      for(int i = 0; i < PAYLOAD_INDEX_CNT; i++)
+      {
+        VehicleCallBackHandler
+          *handler =
+          psdkManager->getCommunicationHandler((PayloadIndexType) i);
+        if (handler && handler->callback) {
+          if (threadSupported) {
+            DDEBUG("Received commonication data from PSDK\n");
+            protocolLayer->getThreadHandle()->lockNonBlockCBAck();
+            this->circularBuffer->cbPush(this->circularBuffer,
+                                         *handler, *pushDataEntry);
+            protocolLayer->getThreadHandle()->freeNonBlockCBAck();
+          } else {
+            handler->callback(this, *(pushDataEntry),
+                              handler->userData);
+          }
+        }
+      }
+    }
+  }
   else if (memcmp(cmd, OpenProtocolCMD::CMDSet::Broadcast::mission,
                   sizeof(cmd)) == 0)
   {
@@ -1906,9 +2117,19 @@ Vehicle::waitForACK(const uint8_t (&cmd)[OpenProtocolCMD::MAX_CMD_ARRAY_SIZE],
   void* pACK;
 
   protocolLayer->getThreadHandle()->lockACK();
+  if (memcmp(cmd, OpenProtocolCMD::CMDSet::Control::extendedFunction,
+             sizeof(cmd)) == 0)
+  {
+    extendedFunctionRspAck.updated = false;
+  }
   protocolLayer->getThreadHandle()->wait(timeout);
 
-  if (memcmp(cmd, OpenProtocolCMD::CMDSet::Mission::waypointAddPoint,
+  if (memcmp(cmd, OpenProtocolCMD::CMDSet::Control::extendedFunction,
+      sizeof(cmd)) == 0)
+  {
+    pACK = static_cast<void*>(&this->extendedFunctionRspAck);
+  }
+  else if (memcmp(cmd, OpenProtocolCMD::CMDSet::Mission::waypointAddPoint,
              sizeof(cmd)) == 0)
   {
     pACK = static_cast<void*>(&this->waypointAddPointACK);
@@ -1947,6 +2168,11 @@ Vehicle::waitForACK(const uint8_t (&cmd)[OpenProtocolCMD::MAX_CMD_ARRAY_SIZE],
            && 0x40 <= cmd[1] && cmd[1] <= 0x53)
   {
     pACK = static_cast<void*>(&this->wayPoint2CommonRspACK);
+  }
+  else if (memcmp(cmd, OpenProtocolCMD::CMDSet::Control::parameterRead, sizeof(cmd)) == 0
+           || memcmp(cmd, OpenProtocolCMD::CMDSet::Control::parameterWrite, sizeof(cmd)) == 0)
+  {
+    pACK = static_cast<void*>(&this->paramAck);
   }
   else
   {
@@ -2122,6 +2348,16 @@ bool
 Vehicle::getEncryption()
 {
   return this->encrypt;
+}
+
+void Vehicle::setActivationStatus(bool is_activated)
+{
+  this->is_activated = is_activated;
+}
+
+bool Vehicle::getActivationStatus()
+{
+  return this->is_activated;
 }
 
 bool

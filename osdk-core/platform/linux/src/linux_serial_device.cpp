@@ -33,6 +33,7 @@
 #include "linux_serial_device.hpp"
 #include <algorithm>
 #include <iterator>
+#include <sys/time.h>
 
 using namespace DJI::OSDK;
 
@@ -76,7 +77,12 @@ LinuxSerialDevice::getDeviceStatus()
 DJI::OSDK::time_ms
 LinuxSerialDevice::getTimeStamp()
 {
-  return (uint32_t)time(NULL);
+  struct timeval tv = {0};
+
+  gettimeofday(&tv, NULL);
+
+  return (tv.tv_sec*1000 + tv.tv_usec/1000);
+  //return (uint32_t)time(NULL);
 }
 
 size_t
@@ -208,7 +214,7 @@ LinuxSerialDevice::_serialConfig(int baudrate, char data_bits, char parity_bits,
   int st_baud[] = { B4800,  B9600,   B19200,  B38400,
                     B57600, B115200, B230400, B921600, B1000000};
   int std_rate[] = { 4800,   9600,   19200,   38400,   57600,  115200,
-                     230400, 921600, 1000000, 1152000, 3000000 };
+                     230400, 921600, 1000000};
 
   int            i, j;
   struct termios newtio, oldtio;

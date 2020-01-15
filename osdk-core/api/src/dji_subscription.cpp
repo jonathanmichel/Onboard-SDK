@@ -83,6 +83,9 @@ TopicInfo Telemetry::TopicDataBase[] =
   {TOPIC_GIMBAL_CONTROL_MODE       , UID_GIMBAL_CONTROL_MODE      , sizeof(TypeMap<TOPIC_GIMBAL_CONTROL_MODE     >::type), 50 ,   0,  255,  0},
   {TOPIC_FLIGHT_ANOMALY            , UID_FLIGHT_ANOMALY           , sizeof(TypeMap<TOPIC_FLIGHT_ANOMALY          >::type), 50 ,   0,  255,  0},
   {TOPIC_POSITION_VO               , UID_POSITION_VO              , sizeof(TypeMap<TOPIC_POSITION_VO             >::type), 200,   0,  255,  0},
+  {TOPIC_AVOID_DATA                , UID_AVOID_DATA               , sizeof(TypeMap<TOPIC_AVOID_DATA              >::type), 100,   0,  255,  0},
+  {TOPIC_HOME_POINT_SET_STATUS     , UID_HOME_POINT_SET_STATUS    , sizeof(TypeMap<TOPIC_HOME_POINT_SET_STATUS   >::type), 50  ,  0,  255,  0},
+  {TOPIC_HOME_POINT_INFO           , UID_HOME_POINT_INFO          , sizeof(TypeMap<TOPIC_HOME_POINT_INFO         >::type), 50  ,  0,  255,  0},
 };
 // clang-format on
 
@@ -703,7 +706,7 @@ SubscriptionPackage::setTopicList(TopicName* topics, int numberOfTopics,
     totalSize += TopicDataBase[topics[i]].size;
     if (totalSize > ADD_PACKAGE_DATA_LENGTH)
     {
-      DDEBUG(
+      DERROR(
         "Too many topics, data payload of the first %d topic is already %d", i,
         totalSize);
       return false;

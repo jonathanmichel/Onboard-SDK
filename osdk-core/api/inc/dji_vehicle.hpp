@@ -53,6 +53,10 @@
 #include "dji_vehicle_callback.hpp"
 #include "dji_version.hpp"
 #include "dji_virtual_rc.hpp"
+#include "dji_payload_device.hpp"
+#include "dji_camera_manager.hpp"
+#include "dji_flight_controller.hpp"
+#include "dji_psdk_manager.hpp"
 #ifdef ADVANCED_SENSING
 #include "dji_advanced_sensing.hpp"
 #endif
@@ -68,6 +72,7 @@
 #include <STM32F4DataGuard.h>
 #elif defined(__linux__)
 #include "posix_thread.hpp"
+
 #endif
 
 namespace DJI
@@ -75,7 +80,7 @@ namespace DJI
 namespace OSDK
 {
 
-static int callbackId;
+
 
 /*! @brief A top-level encapsulation of a DJI drone/FC connected to your OES.
  *
@@ -120,6 +125,10 @@ public:
   HardwareSync*        hardSync;
   // Supported only on Matrice 100
   VirtualRC* virtualRC;
+  PayloadDevice*       payloadDevice;
+  CameraManager*       cameraManager;
+  FlightController*    flightController;
+  PSDKManager*         psdkManager;
 #ifdef ADVANCED_SENSING
   AdvancedSensing* advancedSensing;
 #endif
@@ -289,6 +298,7 @@ public:
   bool    isUSBThreadReady();
 
 private:
+  bool is_activated = false;
   bool encrypt = false;
   Thread* UARTSerialReadThread;
   Thread* callbackThread;
@@ -299,8 +309,9 @@ private:
   //! Initialization data
   bool        threadSupported;
   bool        advancedSensingEnabled;
-  const char* device;
-  uint32_t    baudRate;
+  const char* device = "";
+  uint32_t    baudRate = 0;
+  int callbackId;
 
   //! ACK management
   // Internal space
@@ -321,6 +332,8 @@ private:
   /*!WayPoint add point command ACK*/
   ACK::WayPointAddPoint waypointAddPointACK;
   ACK::MFIOGet          mfioGetACK;
+  ACK::ExtendedFunctionRsp extendedFunctionRspAck;
+  ACK::ParamAck         paramAck;
 
 public:
   uint8_t* getRawVersionAck();
@@ -343,10 +356,13 @@ private:
    */
 public:
   /*! @brief Initialize all functional Vehicle components
-*  like, Subscription, Broadcast, Control, Gimbal, ect
+*  like, Subscription, Broadcast, Control, ect
 */
   int functionalSetUp();
 
+  /*! @brief Initialize gimbal component
+*/
+  bool GimbalSetUp();
 private:
   /*! @brief Initialize minimal Vehicle components
 */
@@ -376,6 +392,10 @@ private:
   bool initMissionManager();
   bool initHardSync();
   bool initVirtualRC();
+  bool initPayloadDevice();
+  bool initCameraManager();
+  bool initFlightController();
+  bool initPSDKManager();
 #ifdef ADVANCED_SENSING
   bool initAdvancedSensing();
 #endif
@@ -443,10 +463,12 @@ public:
   PlatformManager* getPlatformManager() const;
   void setEncryption(bool encryptSetting);
   bool getEncryption();
+  bool getActivationStatus();
   MobileDevice* getMobileDevice();
 
 private:
   PlatformManager* platformManager;
+  void setActivationStatus(bool is_activated);
 };
 }
 }
