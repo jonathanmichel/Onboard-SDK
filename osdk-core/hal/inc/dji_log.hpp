@@ -102,6 +102,8 @@ public:
 
   Log& print();
 
+  void getTimestamp(char* buffer);
+
   /*!
    * @brief Enable logging of status messages called through DSTATUS macro
    * @details Call this method on the DJI::OSDK::Log.instance() in your program.

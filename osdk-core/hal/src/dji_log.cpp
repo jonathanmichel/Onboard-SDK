@@ -29,10 +29,11 @@
 
 #include "dji_log.hpp"
 #include "dji_memory_default.hpp"
-#include "../../../../NivitecPi/util/timer.h"
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <ctime>
+#include <sys/time.h>
 
 using namespace DJI::OSDK;
 
@@ -119,6 +120,11 @@ Log::print(const char* fmt, ...)
     va_end(args);
  }
   return *this;
+}
+
+void Log::getTimestamp(char* buffer) {
+    time_t now = time(0);
+    strftime (buffer, 17,"%G%m%d_%H%M%S", localtime(&now));
 }
 
 Log&
